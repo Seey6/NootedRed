@@ -15,8 +15,7 @@ void DYLDPatches::processPatcher(KernelPatcher &patcher) {
     //! Dear end users, do NOT use `-ChefKissInternal`. THIS FLAG ENABLES FEATURES FOR *DEVELOPER* TESTING.
     //! And to whoever documents them, thanks for making our life harder by making people experience issues
     //! they would otherwise not have, you bloody wanker.
-    if (getKernelVersion() == KernelVersion::Catalina || !(lilu.getRunMode() & LiluAPI::RunningNormal) ||
-        !checkKernelArgument("-ChefKissInternal")) {
+    if (getKernelVersion() == KernelVersion::Catalina || !(lilu.getRunMode() & LiluAPI::RunningNormal)) {
         return;
     }
 
@@ -53,8 +52,10 @@ void DYLDPatches::wrapCsValidatePage(vnode *vp, memory_object_t pager, memory_ob
             LIKELY(strncmp(path, kCoreLSKDPath, arrsize(kCoreLSKDPath)))) {
             return;
         }
-        const DYLDPatch patch = {kCoreLSKDOriginal, kCoreLSKDPatched, "CoreLSKD streaming CPUID to Haswell"};
-        patch.apply(const_cast<void *>(data), PAGE_SIZE);
+        if(!checkKernelArgument("-disableVCN")){
+            const DYLDPatch patch = {kCoreLSKDOriginal, kCoreLSKDPatched, "CoreLSKD streaming CPUID to Haswell"};
+            patch.apply(const_cast<void *>(data), PAGE_SIZE);
+        }
         return;
     }
 
@@ -63,6 +64,24 @@ void DYLDPatches::wrapCsValidatePage(vnode *vp, memory_object_t pager, memory_ob
         DBGLOG("DYLD", "Applied 'VideoToolbox DRM model check' patch");
     }
 
+    if(!checkKernelArgument("-disableGLPatch")){
+        if (getKernelVersion() >= KernelVersion::Sonoma) {
+            const DYLDPatch patchOpenGL = {kSonoma133AddrLibGetBaseArrayModeReturnOriginal, kSonoma133AddrLibGetBaseArrayModeReturnPatched, "Sonoma OPENGL changed"};
+            patchOpenGL.apply(const_cast<void *>(data), PAGE_SIZE);
+        } else if (getKernelVersion() == KernelVersion::Ventura) {
+            const DYLDPatch patchOpenGL = {kVentura133AddrLibGetBaseArrayModeReturnOriginal, kVentura133AddrLibGetBaseArrayModeReturnPatched, "Ventura OPENGL changed"};
+            patchOpenGL.apply(const_cast<void *>(data), PAGE_SIZE);
+        } else if (getKernelVersion() == KernelVersion::Monterey) {
+            const DYLDPatch patchOpenGL = {kMontereyAddrLibGetBaseArrayModeReturnOriginal, kMontereyAddrLibGetBaseArrayModeReturnPatched, "Monterey OPENGL changed"};
+            patchOpenGL.apply(const_cast<void *>(data), PAGE_SIZE);
+        } else if (getKernelVersion() == KernelVersion::BigSur) {
+            const DYLDPatch patchOpenGL = {kBigSurAddrLibGetBaseArrayModeReturnOriginal, kBigSurAddrLibGetBaseArrayModeReturnPatched, "BigSur OPENGL changed"};
+            patchOpenGL.apply(const_cast<void *>(data), PAGE_SIZE);
+        }
+    }
+    
+    if(checkKernelArgument("-disableVCN"))return;
+    
     const DYLDPatch patches[] = {
         {kAGVABoardIdOriginal, kAGVABoardIdPatched, "iMacPro1,1 spoof (AppleGVA)"},
         {kHEVCEncBoardIdOriginal, kHEVCEncBoardIdPatched, "iMacPro1,1 spoof (AppleGVAHEVCEncoder)"},
