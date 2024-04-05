@@ -2,6 +2,7 @@
 //! See LICENSE for details.
 
 #include "NRed.hpp"
+#include "DYLDPatches.hpp"
 #include "AppleGFXHDA.hpp"
 #include "HWLibs.hpp"
 #include "Model.hpp"
@@ -31,6 +32,7 @@ static X6000FB x6000fb;
 static X5000HWLibs hwlibs;
 static X5000 x5000;
 static X6000 x6000;
+static DYLDPatches dyldpatches;
 static AppleGFXHDA agfxhda;
 
 void NRed::init() {
@@ -41,6 +43,7 @@ void NRed::init() {
     lilu.onKextLoadForce(&kextBacklight);
     lilu.onKextLoadForce(&kextMCCSControl);
     agfxhda.init();
+    dyldpatches.init();
     x6000fb.init();
     hwlibs.init();
     x6000.init();
@@ -139,6 +142,8 @@ void NRed::processPatcher(KernelPatcher &patcher) {
         this->orgSafeMetaCast};
     PANIC_COND(!patcher.routeMultipleLong(KernelPatcher::KernelID, &request, 1), "nred",
         "Failed to route kernel symbols");
+
+    dyldpatches.processPatcher(patcher);
 
     x6000fb.registerDispMaxBrightnessNotif();
 
